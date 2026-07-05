@@ -337,6 +337,11 @@ button {
   margin-top: 14px;
 }
 .btn-primary:hover { background: var(--color-primary-dark); }
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+.btn-danger:hover { background: #b91c1c; }
 .btn-ghost {
   background: var(--color-surface-2);
   color: var(--color-ink);
@@ -459,6 +464,16 @@ button {
 .alt-btn--active {
   border-color: var(--color-primary);
   background: var(--color-primary-a15);
+}
+
+.navigation-info {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 /* --------------------------------------------------------- elevation --*/

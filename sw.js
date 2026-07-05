@@ -16,6 +16,7 @@ const SHELL_FILES = [
   "./js/map.js",
   "./js/geocoding.js",
   "./js/routing.js",
+  "./js/navigation.js",
   "./js/waypoints.js",
   "./js/elevation.js",
   "./js/ui.js",

@@ -1,5 +1,5 @@
 // ============================================================================
-// waypoints.js – hält die Liste der Wegpunkte (Start, Via, Ziel) im Speicher
+// waypoints.js – holds the list of waypoints (start, via, destination)
 // ============================================================================
 
 const WaypointStore = (() => {
@@ -24,7 +24,7 @@ const WaypointStore = (() => {
   }
 
   function insertBeforeEnd(coords, label = "") {
-    // Fügt einen neuen Punkt als vorletzten ein (=neuer Via-Punkt vor dem Ziel)
+    // Inserts a new point right before the last one (a via point before the destination)
     if (waypoints.length < 2) {
       add(coords, label);
       return;
@@ -46,7 +46,7 @@ const WaypointStore = (() => {
     const wp = waypoints.find((w) => w.id === id);
     if (wp) {
       wp.coords = coords;
-      wp.label = ""; // Label ungültig nach Verschieben, ggf. neu reverse-geocoden
+      wp.label = ""; // label is stale after moving; may be refreshed via reverse geocoding
       notify();
     }
   }
@@ -77,6 +77,12 @@ const WaypointStore = (() => {
     notify();
   }
 
+  /** Replaces all waypoints in one go without emitting intermediate events */
+  function replaceAll(newWaypoints) {
+    waypoints = newWaypoints;
+    notify();
+  }
+
   function coordsList() {
     return waypoints.map((w) => w.coords);
   }
@@ -92,6 +98,7 @@ const WaypointStore = (() => {
     move,
     clear,
     reverseOrder,
+    replaceAll,
     coordsList,
   };
 })();

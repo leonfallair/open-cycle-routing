@@ -1,68 +1,54 @@
-// ============================================================================
-// elevation.js – zeichnet ein einfaches SVG-Höhenprofil für eine Route
+﻿// ============================================================================
+// elevation.js – renders a simple elevation chart for a route
 // ============================================================================
 
 const ElevationChart = (() => {
-  /**
-   * Rendert ein Höhenprofil in das übergebene Container-Element.
-   * @param {HTMLElement} container
-   * @param {Array<[number,number,number]>} coordinates [lng,lat,ele]
-   * @param {number} totalDistance in Metern (für die X-Achse)
-   */
-  function render(container, coordinates, totalDistance) {
-    const withEle = coordinates.filter((c) => c[2] != null);
-    if (withEle.length < 2) {
-      container.innerHTML =
-        '<p class="elevation-empty">Keine Höhendaten für diese Route verfügbar.</p>';
+  function render(container, coordinates, distance) {
+    if (!container) return;
+
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      container.innerHTML = '<div class="elevation-empty">Kein Höhenprofil verfügbar</div>';
       return;
     }
 
-    // Distanz je Punkt kumulieren
-    let cum = 0;
-    const points = [cum, withEle[0][2]];
-    const series = [{ d: 0, ele: withEle[0][2] }];
-    for (let i = 1; i < withEle.length; i++) {
-      cum += Utils.haversine(withEle[i - 1], withEle[i]);
-      series.push({ d: cum, ele: withEle[i][2] });
+    const values = coordinates
+      .map((c) => (c && c[2] != null ? Number(c[2]) : null))
+      .filter((v) => Number.isFinite(v));
+
+    if (values.length < 2) {
+      container.innerHTML = '<div class="elevation-empty">Kein Höhenprofil verfügbar</div>';
+      return;
     }
 
-    const eles = series.map((p) => p.ele);
-    const minEle = Math.min(...eles);
-    const maxEle = Math.max(...eles);
-    const eleRange = Math.max(maxEle - minEle, 10);
-
-    const width = 600;
+    const width = Math.max(280, container.clientWidth || 320);
     const height = 140;
-    const padL = 38;
-    const padB = 20;
-    const padT = 10;
-    const innerW = width - padL - 10;
-    const innerH = height - padT - padB;
-    const dist = cum || totalDistance || 1;
+    const margin = 12;
+    const chartWidth = width - margin * 2;
+    const chartHeight = height - margin * 2;
 
-    const toX = (d) => padL + (d / dist) * innerW;
-    const toY = (ele) => padT + innerH - ((ele - minEle) / eleRange) * innerH;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
 
-    const linePoints = series
-      .map((p) => `${toX(p.d).toFixed(1)},${toY(p.ele).toFixed(1)}`)
-      .join(" ");
+    const points = coordinates.map((c, i) => {
+      const value = c && c[2] != null ? Number(c[2]) : (min + max) / 2;
+      const x = margin + (i / (coordinates.length - 1)) * chartWidth;
+      const y = margin + chartHeight - ((value - min) / range) * chartHeight;
+      return { x, y };
+    });
 
-    const areaPoints = `${padL},${padT + innerH} ${linePoints} ${toX(dist).toFixed(1)},${padT + innerH}`;
+    const linePoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const areaPoints = `${points[0].x.toFixed(1)},${height - margin} ${linePoints} ${points[points.length - 1].x.toFixed(1)},${height - margin}`;
 
-    // Y-Achsenbeschriftung (min/max)
-    const svg = `
-<svg viewBox="0 0 ${width} ${height}" class="elevation-svg" preserveAspectRatio="none">
-  <polyline points="${areaPoints}" class="elevation-area"></polyline>
-  <polyline points="${linePoints}" class="elevation-line"></polyline>
-  <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + innerH}" class="elevation-axis"></line>
-  <line x1="${padL}" y1="${padT + innerH}" x2="${width - 10}" y2="${padT + innerH}" class="elevation-axis"></line>
-  <text x="4" y="${padT + 8}" class="elevation-label">${Math.round(maxEle)} m</text>
-  <text x="4" y="${padT + innerH}" class="elevation-label">${Math.round(minEle)} m</text>
-  <text x="${padL}" y="${height - 4}" class="elevation-label">0 km</text>
-  <text x="${width - 30}" y="${height - 4}" class="elevation-label">${(dist / 1000).toFixed(1)} km</text>
-</svg>`;
-
-    container.innerHTML = svg;
+    container.innerHTML = `
+      <svg class="elevation-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Höhenprofil der Route">
+        <line class="elevation-axis" x1="${margin}" y1="${height - margin}" x2="${width - margin}" y2="${height - margin}" />
+        <line class="elevation-axis" x1="${margin}" y1="${margin}" x2="${margin}" y2="${height - margin}" />
+        <polygon class="elevation-area" points="${areaPoints}" />
+        <polyline class="elevation-line" points="${linePoints}" />
+        <text class="elevation-label" x="${margin}" y="${margin + 10}">${Utils.formatDistance(distance || 0)}</text>
+      </svg>
+    `;
   }
 
   return { render };

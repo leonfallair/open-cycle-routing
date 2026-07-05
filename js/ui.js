@@ -24,7 +24,14 @@ const UI = (() => {
         if (label) WaypointStore.setLabel(id, label);
       });
     };
+    Navigation.onUpdate = handleNavigationUpdate;
+    Navigation.onOffRoute = () => toast("Sie sind von der Route abgekommen.");
+    Navigation.onArrive = () => {
+      toast("Ziel erreicht.");
+      updateNavigationUi();
+    };
     renderWaypointList([]);
+    updateNavigationUi();
   }
 
   function cacheDom() {
@@ -45,6 +52,8 @@ const UI = (() => {
     dom.statDown = document.getElementById("statDown");
     dom.altList = document.getElementById("altList");
     dom.elevationChart = document.getElementById("elevationChart");
+    dom.startNavBtn = document.getElementById("startNavBtn");
+    dom.navigationInfo = document.getElementById("navigationInfo");
     dom.routeStatus = document.getElementById("routeStatus");
     dom.toastContainer = document.getElementById("toastContainer");
     dom.hint = document.getElementById("mapHint");
@@ -88,6 +97,9 @@ const UI = (() => {
       chip.classList.toggle("chip--active", chip.dataset.profile === id);
     });
     updateProfileDesc();
+    if (Navigation.isActive()) {
+      Navigation.stop();
+    }
     triggerRouteCalculation();
   }
 
@@ -117,6 +129,9 @@ const UI = (() => {
   }
 
   function handleWaypointsChanged(waypoints) {
+    if (Navigation.isActive()) {
+      Navigation.stop();
+    }
     renderWaypointList(waypoints);
     MapModule.renderMarkers(waypoints);
     if (waypoints.length >= 2) {
@@ -127,6 +142,7 @@ const UI = (() => {
       showStats(null);
       if (dom.hint) dom.hint.style.display = "";
     }
+    updateNavigationUi();
   }
 
   function rowMeta(index, total) {
@@ -292,6 +308,7 @@ const UI = (() => {
       activeRouteIdx = 0;
       renderResult();
       setStatus("ok", "");
+      updateNavigationUi();
     } catch (err) {
       if (token !== calcToken) return;
       console.error(err);
@@ -351,6 +368,69 @@ const UI = (() => {
     dom.statDown.textContent = route.elevationLoss != null ? "−" + Utils.formatElevation(route.elevationLoss) : "–";
   }
 
+  function updateNavigationUi() {
+    if (!dom.startNavBtn) return;
+    const hasRoute = !!lastResult && WaypointStore.getAll().length >= 2;
+    const active = Navigation.isActive();
+    dom.startNavBtn.disabled = !hasRoute;
+    dom.startNavBtn.textContent = active ? "⏹ Navigation beenden" : "▶ Route starten";
+    dom.startNavBtn.classList.toggle("btn-danger", active);
+    if (dom.navigationInfo) {
+      dom.navigationInfo.style.display = active ? "" : "none";
+      if (!active) dom.navigationInfo.innerHTML = "";
+    }
+  }
+
+  function handleNavigationUpdate(state) {
+    if (!dom.navigationInfo) return;
+    dom.navigationInfo.style.display = "";
+    const parts = [];
+    if (state?.nextManeuver) {
+      const distText = state.distanceToManeuver != null ? ` · ${Utils.formatDistance(state.distanceToManeuver)}` : "";
+      parts.push(`${state.nextManeuver.text}${distText}`);
+    } else {
+      parts.push("Weiter auf der Route");
+    }
+    if (state?.distanceRemaining != null) {
+      parts.push(`noch ${Utils.formatDistance(state.distanceRemaining)}`);
+    }
+    if (state?.etaSeconds != null) {
+      parts.push(`ETA ${Utils.formatDuration(state.etaSeconds)}`);
+    }
+    dom.navigationInfo.innerHTML = `<strong>Live-Navigation</strong><br>${parts.join(" · ")}`;
+  }
+
+  function toggleNavigation() {
+    if (Navigation.isActive()) {
+      Navigation.stop();
+      toast("Navigation beendet.");
+      updateNavigationUi();
+      return;
+    }
+
+    if (!lastResult) {
+      toast("Bitte zuerst eine Route berechnen.");
+      return;
+    }
+
+    const waypoints = WaypointStore.getAll();
+    if (waypoints.length < 2) {
+      toast("Bitte Start und Ziel setzen.");
+      return;
+    }
+
+    const routes = [lastResult.main, ...lastResult.alternatives];
+    const activeRoute = routes[activeRouteIdx] || routes[0];
+
+    try {
+      Navigation.start(activeRoute, waypoints);
+      toast("Live-Navigation gestartet.");
+      updateNavigationUi();
+    } catch (err) {
+      toast(err.message || "Navigation konnte nicht gestartet werden.");
+    }
+  }
+
   function setStatus(kind, message) {
     if (!dom.routeStatus) return;
     dom.routeStatus.className = "route-status route-status--" + kind;
@@ -367,10 +447,14 @@ const UI = (() => {
     });
 
     dom.clearBtn.addEventListener("click", () => {
+      if (Navigation.isActive()) {
+        Navigation.stop();
+      }
       WaypointStore.clear();
       lastResult = null;
       pendingViaSlots = 0;
       dom.altList.innerHTML = "";
+      updateNavigationUi();
     });
 
     dom.reverseBtn.addEventListener("click", () => {
@@ -378,6 +462,7 @@ const UI = (() => {
     });
 
     dom.gpxBtn.addEventListener("click", exportGPX);
+    dom.startNavBtn.addEventListener("click", toggleNavigation);
 
     dom.locateBtn.addEventListener("click", useMyLocation);
 

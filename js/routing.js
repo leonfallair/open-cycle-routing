@@ -1,17 +1,17 @@
 // ============================================================================
-// routing.js – Kommunikation mit dem BRouter-Routing-Server
+// routing.js – talks to the BRouter routing server
 //
-// BRouter ist ein Open-Source-Routing-Engine speziell für Fahrrad/Fuß-
-// Navigation auf Basis von OpenStreetMap-Daten. Der öffentliche Server ist
-// kostenlos nutzbar. Siehe https://github.com/abrensch/brouter
+// BRouter is an open-source routing engine built specifically for bike/foot
+// navigation on OpenStreetMap data. The public server is free to use.
+// See https://github.com/abrensch/brouter
 // ============================================================================
 
 const Routing = (() => {
   /**
-   * Baut die BRouter-Request-URL.
-   * @param {Array<[number,number]>} coordsList Liste von [lng, lat]
-   * @param {string} profile BRouter-Profilname (z.B. "trekking")
-   * @param {number} alternativeidx 0 = beste Route, 1/2/3 = Alternativen
+   * Builds the BRouter request URL.
+   * @param {Array<[number,number]>} coordsList list of [lng, lat]
+   * @param {string} profile BRouter profile name (e.g. "trekking")
+   * @param {number} alternativeidx 0 = best route, 1/2/3 = alternatives
    */
   function buildUrl(coordsList, profile, alternativeidx = 0) {
     const lonlats = coordsList.map(([lng, lat]) => `${lng},${lat}`).join("|");
@@ -31,13 +31,13 @@ const Routing = (() => {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(
-          `Routing-Server antwortete mit ${res.status}${text ? ": " + text.slice(0, 200) : ""}`
+          `Routing server responded with ${res.status}${text ? ": " + text.slice(0, 200) : ""}`
         );
       }
       return await res.json();
     } catch (err) {
       if (err.name === "AbortError") {
-        throw new Error("Zeitüberschreitung bei der Routenberechnung.");
+        throw new Error("Route calculation timed out.");
       }
       throw err;
     } finally {
@@ -45,7 +45,7 @@ const Routing = (() => {
     }
   }
 
-  /** Berechnet Höhenmeter bergauf/bergab aus den z-Werten der Koordinaten */
+  /** Computes ascent/descent from the z-values of the coordinates */
   function computeElevation(coordinates) {
     let gain = 0;
     let loss = 0;
@@ -62,10 +62,10 @@ const Routing = (() => {
     return hasElevation ? { gain, loss } : { gain: null, loss: null };
   }
 
-  /** Extrahiert nutzbare Metadaten aus einer BRouter-GeoJSON-Antwort */
+  /** Extracts usable metadata from a BRouter GeoJSON response */
   function parseResult(geojson) {
     const feature = geojson.features?.[0];
-    if (!feature) throw new Error("Keine Route in der Server-Antwort gefunden.");
+    if (!feature) throw new Error("No route found in the server response.");
 
     const coords = feature.geometry.coordinates;
     const props = feature.properties || {};
@@ -91,12 +91,12 @@ const Routing = (() => {
   }
 
   /**
-   * Berechnet eine Route inkl. optionaler Alternativen.
+   * Calculates a route including optional alternatives.
    * @returns {Promise<{main: object, alternatives: object[]}>}
    */
   async function calculateRoute(coordsList, profile, wantAlternatives) {
     if (coordsList.length < 2) {
-      throw new Error("Mindestens Start und Ziel werden benötigt.");
+      throw new Error("At least a start and destination point are required.");
     }
 
     const mainUrl = buildUrl(coordsList, profile, 0);
@@ -104,14 +104,14 @@ const Routing = (() => {
     const main = parseResult(mainJson);
 
     let alternatives = [];
-    // Alternativrouten liefert BRouter zuverlässig nur ohne Zwischenpunkte
+    // BRouter only reliably returns alternatives without via points
     if (wantAlternatives && coordsList.length === 2 && CONFIG.ALTERNATIVE_ROUTES > 0) {
       const requests = [];
       for (let i = 1; i <= CONFIG.ALTERNATIVE_ROUTES; i++) {
         requests.push(
           fetchWithTimeout(buildUrl(coordsList, profile, i))
             .then(parseResult)
-            .catch(() => null) // Alternative optional – Fehler hier ignorieren
+            .catch(() => null) // alternatives are optional – ignore failures
         );
       }
       alternatives = (await Promise.all(requests)).filter(Boolean);
@@ -120,8 +120,8 @@ const Routing = (() => {
     return { main, alternatives };
   }
 
-  /** Baut eine GPX-Datei (String) aus einer berechneten Route */
-  function toGPX(route, name = "OpenRadRoute Track") {
+  /** Builds a GPX file (string) from a calculated route */
+  function toGPX(route, name = "OpenRouting Track") {
     const points = route.coordinates
       .map(([lng, lat, ele]) => {
         const eleTag = ele != null ? `<ele>${ele.toFixed(1)}</ele>` : "";
@@ -130,7 +130,7 @@ const Routing = (() => {
       .join("\n");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="OpenRadRoute" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="OpenRouting" xmlns="http://www.topografix.com/GPX/1/1">
   <trk>
     <name>${Utils.escapeHtml(name)}</name>
     <trkseg>

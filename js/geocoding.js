@@ -1,11 +1,11 @@
 // ============================================================================
-// geocoding.js – Adresssuche über Nominatim (OpenStreetMap)
+// geocoding.js – address search via Nominatim (OpenStreetMap)
 // ============================================================================
 
 const Geocoding = (() => {
   /**
-   * Sucht Orte/Adressen anhand eines Textes.
-   * Gibt ein Array von { label, coords: [lng, lat] } zurück.
+   * Searches for places/addresses matching a text query.
+   * Returns an array of { label, coords: [lng, lat] }.
    */
   async function search(query) {
     if (!query || query.trim().length < 3) return [];
@@ -18,11 +18,11 @@ const Geocoding = (() => {
 
     const res = await fetch(url, {
       headers: {
-        // Nominatim Nutzungsrichtlinie: eigener Identifier statt generischem UA
+        // Nominatim usage policy: identify the app instead of a generic UA
         Accept: "application/json",
       },
     });
-    if (!res.ok) throw new Error("Geocoding fehlgeschlagen (" + res.status + ")");
+    if (!res.ok) throw new Error("Geocoding failed (" + res.status + ")");
 
     const data = await res.json();
     return data.map((item) => ({
@@ -31,7 +31,7 @@ const Geocoding = (() => {
     }));
   }
 
-  /** Reverse-Geocoding: Koordinate -> lesbarer Name (für Marker-Beschriftung) */
+  /** Reverse geocoding: coordinate -> readable name (for marker labels) */
   async function reverse([lng, lat]) {
     const url = new URL(CONFIG.NOMINATIM_URL + "/reverse");
     url.searchParams.set("lon", lng);

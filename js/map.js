@@ -1,12 +1,14 @@
 // ============================================================================
-// map.js – MapLibre GL Karte, Marker & Routen-Layer
+// map.js – MapLibre GL map, markers, route layers, navigation camera
 // ============================================================================
 
 const MapModule = (() => {
   let map = null;
   let markers = []; // { id, marker, type: 'start'|'via'|'end' }
+  let userMarker = null;
   let onWaypointDrag = null;
   let onMapClick = null;
+  let onUserPan = null; // fired when the user manually moves the map during nav
 
   function init() {
     map = new maplibregl.Map({
@@ -38,6 +40,10 @@ const MapModule = (() => {
       if (onMapClick) onMapClick([e.lngLat.lng, e.lngLat.lat]);
     });
 
+    // Detect manual map interaction so we can pause camera-follow during nav
+    map.on("dragstart", () => onUserPan && onUserPan());
+    map.on("wheel", () => onUserPan && onUserPan());
+
     return new Promise((resolve) => {
       map.on("load", () => {
         setupRouteLayers();
@@ -47,7 +53,7 @@ const MapModule = (() => {
   }
 
   function setupRouteLayers() {
-    // Alternativrouten (dünn, gedämpft) – unter der Hauptroute
+    // Alternative routes (thin, muted) – below the main route
     map.addSource("route-alt", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -65,7 +71,24 @@ const MapModule = (() => {
       },
     });
 
-    // Hauptroute
+    // Already traveled portion of the route during live navigation
+    map.addSource("route-traveled", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    map.addLayer({
+      id: "route-traveled-line",
+      type: "line",
+      source: "route-traveled",
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: {
+        "line-color": "#94a3b8",
+        "line-width": 5,
+        "line-opacity": 0.8,
+      },
+    });
+
+    // Main route
     map.addSource("route-main", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -94,18 +117,21 @@ const MapModule = (() => {
   }
 
   function setAlternativeRoutes(featureCollection) {
-    const src = map.getSource("route-alt");
-    if (src) src.setData(featureCollection);
+    map.getSource("route-alt")?.setData(featureCollection);
   }
 
   function setMainRoute(featureCollection) {
-    const src = map.getSource("route-main");
-    if (src) src.setData(featureCollection);
+    map.getSource("route-main")?.setData(featureCollection);
+  }
+
+  function setTraveledRoute(featureCollection) {
+    map.getSource("route-traveled")?.setData(featureCollection);
   }
 
   function clearRoutes() {
     setMainRoute({ type: "FeatureCollection", features: [] });
     setAlternativeRoutes({ type: "FeatureCollection", features: [] });
+    setTraveledRoute({ type: "FeatureCollection", features: [] });
   }
 
   function markerColor(type) {
@@ -129,7 +155,7 @@ const MapModule = (() => {
     return el;
   }
 
-  /** Rendert alle Marker neu anhand der Waypoint-Liste */
+  /** Re-renders all waypoint markers */
   function renderMarkers(waypoints) {
     markers.forEach((m) => m.marker.remove());
     markers = [];
@@ -157,6 +183,52 @@ const MapModule = (() => {
     });
   }
 
+  function setMarkersVisible(visible) {
+    markers.forEach((m) => (m.marker.getElement().style.display = visible ? "" : "none"));
+  }
+
+  // --------------------------------------------------------- user puck --
+  function showUserPuck(coords, heading) {
+    if (!userMarker) {
+      const el = document.createElement("div");
+      el.className = "user-puck";
+      el.innerHTML =
+        '<div class="user-puck-arrow"></div><div class="user-puck-dot"></div>';
+      userMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+        .setLngLat(coords)
+        .addTo(map);
+    } else {
+      userMarker.setLngLat(coords);
+    }
+    const arrow = userMarker.getElement().querySelector(".user-puck-arrow");
+    if (arrow) {
+      arrow.style.display = heading == null ? "none" : "block";
+      if (heading != null) arrow.style.transform = `rotate(${heading}deg)`;
+    }
+  }
+
+  function hideUserPuck() {
+    if (userMarker) {
+      userMarker.remove();
+      userMarker = null;
+    }
+  }
+
+  /** Smoothly moves/rotates the camera to follow the user during navigation */
+  function followCamera(coords, bearingDeg, zoom = 18) {
+    map.easeTo({
+      center: coords,
+      bearing: bearingDeg ?? map.getBearing(),
+      zoom,
+      pitch: 45,
+      duration: 700,
+    });
+  }
+
+  function resetCameraNorth() {
+    map.easeTo({ bearing: 0, pitch: 0, duration: 500 });
+  }
+
   function flyTo(coords, zoom) {
     map.flyTo({ center: coords, zoom: zoom ?? Math.max(map.getZoom(), 14) });
   }
@@ -178,9 +250,15 @@ const MapModule = (() => {
     init,
     getMap: () => map,
     renderMarkers,
+    setMarkersVisible,
     setMainRoute,
     setAlternativeRoutes,
+    setTraveledRoute,
     clearRoutes,
+    showUserPuck,
+    hideUserPuck,
+    followCamera,
+    resetCameraNorth,
     flyTo,
     fitToBounds,
     set onWaypointDrag(fn) {
@@ -188,6 +266,9 @@ const MapModule = (() => {
     },
     set onMapClick(fn) {
       onMapClick = fn;
+    },
+    set onUserPan(fn) {
+      onUserPan = fn;
     },
   };
 })();
