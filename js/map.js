@@ -47,6 +47,7 @@ const MapModule = (() => {
     return new Promise((resolve) => {
       map.on("load", () => {
         setupRouteLayers();
+        requestUserLocation({ silent: true });
         resolve(map);
       });
     });
@@ -207,6 +208,26 @@ const MapModule = (() => {
     }
   }
 
+  function requestUserLocation(options = {}) {
+    if (!navigator.geolocation) return;
+
+    const { flyTo = false, zoom = 15, silent = false } = options;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = [position.coords.longitude, position.coords.latitude];
+        const heading = position.coords.heading ?? null;
+        showUserPuck(coords, heading);
+        if (flyTo) {
+          flyTo(coords, zoom);
+        }
+      },
+      (err) => {
+        if (!silent) console.warn("Geolocation error", err);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 1000 }
+    );
+  }
+
   function hideUserPuck() {
     if (userMarker) {
       userMarker.remove();
@@ -257,6 +278,7 @@ const MapModule = (() => {
     clearRoutes,
     showUserPuck,
     hideUserPuck,
+    requestUserLocation,
     followCamera,
     resetCameraNorth,
     flyTo,

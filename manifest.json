@@ -1,6 +1,6 @@
 {
-  "name": "OpenRadRoute",
-  "short_name": "OpenRadRoute",
+  "name": "OpenCycleRouting",
+  "short_name": "OpenCycleRouting",
   "description": "Kostenlose, quelloffene Fahrrad-Routenplanung auf Basis von OpenStreetMap.",
   "start_url": "./index.html",
   "scope": "./",

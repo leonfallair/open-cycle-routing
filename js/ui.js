@@ -334,6 +334,7 @@ const UI = (() => {
     showStats(active);
     renderAlternatives(routes);
     ElevationChart.render(dom.elevationChart, active.coordinates, active.distance);
+    MapModule.requestUserLocation({ flyTo: true, zoom: 15, silent: true });
   }
 
   function renderAlternatives(routes) {
@@ -426,6 +427,7 @@ const UI = (() => {
     const activeRoute = routes[activeRouteIdx] || routes[0];
 
     try {
+      MapModule.requestUserLocation({ flyTo: true, zoom: 16, silent: true });
       Navigation.start(activeRoute, waypoints);
       toast("Live navigation started.");
       updateNavigationUi();
@@ -480,12 +482,12 @@ const UI = (() => {
     }
     const routes = [lastResult.main, ...lastResult.alternatives];
     const active = routes[activeRouteIdx] || routes[0];
-    const gpx = Routing.toGPX(active, "OpenRadRoute Track");
+    const gpx = Routing.toGPX(active, "OpenCycleRouting Track");
     const blob = new Blob([gpx], { type: "application/gpx+xml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "openradroute-track.gpx";
+    a.download = "opencyclerouting-track.gpx";
     document.body.appendChild(a);
     a.click();
     a.remove();
