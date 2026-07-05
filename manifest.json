@@ -1,0 +1,19 @@
+{
+  "name": "OpenRadRoute",
+  "short_name": "OpenRadRoute",
+  "description": "Kostenlose, quelloffene Fahrrad-Routenplanung auf Basis von OpenStreetMap.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f5f0",
+  "theme_color": "#2f6b4f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

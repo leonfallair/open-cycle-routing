@@ -1,0 +1,544 @@
+/* ============================================================================
+   OpenRadRoute – Design-Tokens
+   Idee: Kalkstein-Weiß der Neckartal-Hänge als Grundton, Moos-/Waldgrün als
+   Markenfarbe (Rad durch die Landschaft), Routenlinie bewusst im vertrauten
+   Navigations-Blau (Wiedererkennung), Kenndaten in Mono-Ziffern wie am
+   Fahrradcomputer.
+============================================================================ */
+
+@font-face {
+  font-family: "Inter";
+  src: local("Inter");
+}
+
+:root {
+  /* Farben */
+  --color-bg: #f4f5f0;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0ea;
+  --color-ink: #16201a;
+  --color-muted: #5b6b5f;
+  --color-border: #dde2d7;
+
+  --color-primary: #2f6b4f;       /* Moosgrün – Markenfarbe / UI-Akzent */
+  --color-primary-dark: #234f3b;
+  --color-primary-a15: rgba(47, 107, 79, 0.16);
+
+  --color-route: #2563eb;         /* Routenlinie – klassisches Navi-Blau */
+  --color-start: #16a34a;
+  --color-end: #dc2626;
+  --color-via: #f59e0b;
+
+  --color-danger: #dc2626;
+
+  /* Typografie */
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Layout */
+  --radius-s: 8px;
+  --radius-m: 14px;
+  --radius-l: 20px;
+  --shadow-sheet: 0 -4px 24px rgba(20, 30, 20, 0.14);
+  --shadow-float: 0 2px 10px rgba(20, 30, 20, 0.16);
+
+  --sheet-peek: 172px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: var(--color-ink);
+  background: var(--color-bg);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+/* Fokus sichtbar halten (Barrierefreiheit), aber nur bei Tastaturbedienung */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- hint --*/
+.map-hint {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  padding: 10px 16px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  font-size: 13.5px;
+  max-width: 86vw;
+  text-align: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------- wp markers --*/
+.wp-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--marker-color, var(--color-via));
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  border: 2px solid white;
+  cursor: grab;
+}
+.wp-marker > * {
+  transform: rotate(45deg);
+}
+.wp-marker--via {
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------- toasts --*/
+.toast-container {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: var(--color-ink);
+  color: white;
+  padding: 10px 16px;
+  border-radius: var(--radius-s);
+  font-size: 13.5px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  box-shadow: var(--shadow-float);
+}
+.toast--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------- sheet --*/
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  box-shadow: var(--shadow-sheet);
+  z-index: 10;
+  max-height: 88vh;
+  height: var(--sheet-peek);
+  transition: height 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--safe-bottom);
+}
+.sheet--expanded {
+  height: min(82vh, 720px);
+}
+
+.sheet-handle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 0 6px;
+  display: flex;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet-handle-bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.sheet-content {
+  flex: 1;
+  overflow: hidden;
+}
+.sheet-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 16px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.panel-section:last-child {
+  border-bottom: none;
+}
+.panel-title {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------- waypoints --*/
+.waypoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+.wp-badge {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  background: var(--color-via);
+}
+.wp-badge--start { background: var(--color-start); }
+.wp-badge--end { background: var(--color-end); }
+
+.wp-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.wp-field input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  font-size: 15px;
+  color: var(--color-ink);
+}
+.wp-field input:focus {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+}
+
+.wp-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-float);
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.wp-suggestion {
+  padding: 10px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.wp-suggestion:last-child { border-bottom: none; }
+.wp-suggestion:hover, .wp-suggestion:active {
+  background: var(--color-surface-2);
+}
+.wp-suggestion--empty, .wp-suggestion--error {
+  color: var(--color-muted);
+  cursor: default;
+}
+
+.wp-remove {
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.wp-remove:hover {
+  background: var(--color-surface-2);
+  color: var(--color-danger);
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------- buttons --*/
+.btn {
+  border: none;
+  border-radius: var(--radius-s);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  margin-top: 14px;
+}
+.btn-primary:hover { background: var(--color-primary-dark); }
+.btn-ghost {
+  background: var(--color-surface-2);
+  color: var(--color-ink);
+}
+.btn-ghost:hover { background: var(--color-border); }
+.btn-small {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* -------------------------------------------------------------- chips --*/
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip-icon { font-size: 15px; }
+.chip--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+.profile-desc {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* ---------------------------------------------------------- route status --*/
+.route-status {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-s);
+  font-size: 13.5px;
+}
+.route-status--loading {
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+}
+.route-status--error {
+  background: #fdecea;
+  color: var(--color-danger);
+}
+.route-status--ok { display: none !important; }
+
+/* ------------------------------------------------------------- stats --*/
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stat {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-s);
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.stat-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.alt-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 14px;
+}
+.alt-btn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-s);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--color-muted);
+  min-width: 84px;
+}
+.alt-btn strong {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-ink);
+}
+.alt-btn--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-a15);
+}
+
+/* --------------------------------------------------------- elevation --*/
+.elevation-chart {
+  margin-bottom: 4px;
+}
+.elevation-svg {
+  width: 100%;
+  height: 140px;
+  display: block;
+}
+.elevation-area {
+  fill: var(--color-primary-a15);
+  stroke: none;
+}
+.elevation-line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+.elevation-axis {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+.elevation-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--color-muted);
+}
+.elevation-empty {
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* -------------------------------------------------------- maplibre ui --*/
+.maplibregl-ctrl-top-right {
+  top: calc(14px + env(safe-area-inset-top, 0px));
+}
+.maplibregl-ctrl-group {
+  border-radius: var(--radius-s) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-float) !important;
+}
+
+/* ================================================================
+   Desktop / Tablet: Sheet wird zur festen Seitenleiste
+================================================================ */
+@media (min-width: 860px) {
+  .sheet {
+    top: 0;
+    right: auto;
+    left: 0;
+    width: 400px;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: 6px 0 24px rgba(20, 30, 20, 0.12);
+  }
+  .sheet--expanded { height: 100%; }
+  .sheet-handle { display: none; }
+  .sheet-content { padding-top: 16px; }
+
+  .maplibregl-ctrl-top-right {
+    right: 12px;
+  }
+
+  .map-hint {
+    left: calc(400px + (100vw - 400px) / 2);
+  }
+
+  .toast-container {
+    left: calc(400px + (100vw - 400px) / 2);
+  }
+}
+
+/* Reduzierte Bewegung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .toast {
+    transition: none !important;
+  }
+}

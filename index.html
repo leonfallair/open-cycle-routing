@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>OpenRadRoute – kostenlose Fahrrad-Routenplanung</title>
+<meta name="description" content="Open-Source Fahrrad-Routenplaner auf Basis von OpenStreetMap. Kostenlos, ohne Abo, ohne Werbung." />
+<meta name="theme-color" content="#2563eb" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./icons/icon.svg" />
+
+<!-- MapLibre GL JS (Open-Source, keine Kosten, kein API-Key nötig) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.0.0/maplibre-gl.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.0.0/maplibre-gl.min.js"></script>
+
+<link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+
+<div id="app">
+  <div id="map"></div>
+
+  <!-- Hinweis-Overlay, solange keine Wegpunkte gesetzt sind -->
+  <div id="mapHint" class="map-hint">
+    Tippe auf die Karte, um Start &amp; Ziel zu setzen –
+    oder nutze die Suche unten.
+  </div>
+
+  <!-- Bottom Sheet (mobil) / Sidebar (Desktop) -->
+  <div id="sheet" class="sheet">
+    <button id="sheetHandle" class="sheet-handle" aria-label="Panel ein-/ausklappen">
+      <span class="sheet-handle-bar"></span>
+    </button>
+
+    <div class="sheet-content">
+      <div class="sheet-scroll">
+
+        <section class="panel-section">
+          <div id="waypointList" class="waypoint-list"></div>
+          <button id="addViaBtn" class="btn btn-ghost btn-small" type="button" style="display:none;">
+            + Zwischenstopp über Suche
+          </button>
+          <div class="row-actions">
+            <button id="locateBtn" class="btn btn-ghost btn-small" type="button">📍 Mein Standort</button>
+            <button id="reverseBtn" class="btn btn-ghost btn-small" type="button">⇅ Umkehren</button>
+            <button id="clearBtn" class="btn btn-ghost btn-small" type="button">🗑 Leeren</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="panel-title">Routing-Profil</h2>
+          <div id="profileChips" class="chip-row"></div>
+          <p id="profileDesc" class="profile-desc"></p>
+        </section>
+
+        <div id="routeStatus" class="route-status" style="display:none;"></div>
+
+        <section id="statsPanel" class="panel-section stats-panel" style="display:none;">
+          <div class="stats-grid">
+            <div class="stat"><span class="stat-label">Distanz</span><span id="statDistance" class="stat-value">–</span></div>
+            <div class="stat"><span class="stat-label">Dauer</span><span id="statDuration" class="stat-value">–</span></div>
+            <div class="stat"><span class="stat-label">Bergauf</span><span id="statUp" class="stat-value">–</span></div>
+            <div class="stat"><span class="stat-label">Bergab</span><span id="statDown" class="stat-value">–</span></div>
+          </div>
+
+          <div id="altList" class="alt-list"></div>
+
+          <div id="elevationChart" class="elevation-chart"></div>
+
+          <button id="gpxBtn" class="btn btn-primary" type="button">⭳ Als GPX exportieren</button>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+</div>
+
+<script src="./js/config.js"></script>
+<script src="./js/utils.js"></script>
+<script src="./js/map.js"></script>
+<script src="./js/geocoding.js"></script>
+<script src="./js/routing.js"></script>
+<script src="./js/waypoints.js"></script>
+<script src="./js/elevation.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/main.js"></script>
+</body>
+</html>
