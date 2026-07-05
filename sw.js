@@ -4,7 +4,7 @@
 // werden bewusst NICHT gecacht, da sie sich ändern bzw. viel Speicher fressen.
 // ============================================================================
 
-const CACHE_NAME = "openradroute-shell-v1";
+const CACHE_NAME = "openradroute-shell-v2";
 
 const SHELL_FILES = [
   "./",
@@ -40,6 +40,12 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

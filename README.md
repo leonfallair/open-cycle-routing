@@ -1,4 +1,4 @@
-# 🚴 OpenRadRoute
+# 🚴 Open Cyle Routing
 
 A free, open-source bicycle route planner based on OpenStreetMap.  
 No login, no subscription, no ads — unlike Komoot or Strava, turn-by-turn navigation here is fully free because it relies exclusively on open, cost-free services.

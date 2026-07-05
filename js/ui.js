@@ -25,9 +25,9 @@ const UI = (() => {
       });
     };
     Navigation.onUpdate = handleNavigationUpdate;
-    Navigation.onOffRoute = () => toast("Sie sind von der Route abgekommen.");
+    Navigation.onOffRoute = () => toast("You left the route.");
     Navigation.onArrive = () => {
-      toast("Ziel erreicht.");
+      toast("Destination reached.");
       updateNavigationUi();
     };
     renderWaypointList([]);
@@ -147,8 +147,8 @@ const UI = (() => {
 
   function rowMeta(index, total) {
     if (index === 0) return { type: "start", label: "Start", icon: "A" };
-    if (index === total - 1) return { type: "end", label: "Ziel", icon: "B" };
-    return { type: "via", label: `Stopp ${index}`, icon: String(index) };
+    if (index === total - 1) return { type: "end", label: "Destination", icon: "B" };
+    return { type: "via", label: `Stop ${index}`, icon: String(index) };
   }
 
   function renderWaypointList(waypoints) {
@@ -168,7 +168,7 @@ const UI = (() => {
 
     // Zusätzliche leere "Zwischenstopp"-Zeilen (über Suche) vor dem Ziel
     for (let i = 0; i < pendingViaSlots; i++) {
-      const row = buildRow(null, { type: "via", label: "Zwischenstopp", icon: "+" }, -1, -1);
+      const row = buildRow(null, { type: "via", label: "Via point", icon: "+" }, -1, -1);
       dom.waypointList.insertBefore(row, dom.waypointList.lastElementChild);
     }
 
@@ -190,10 +190,10 @@ const UI = (() => {
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = meta.type === "start"
-      ? "Startpunkt suchen oder auf Karte tippen"
+      ? "Search start point or tap the map"
       : meta.type === "end"
-      ? "Ziel suchen oder auf Karte tippen"
-      : "Zwischenstopp suchen";
+      ? "Search destination or tap the map"
+      : "Search via point";
     input.value = wp?.label || (wp ? formatCoords(wp.coords) : "");
     input.autocomplete = "off";
     field.appendChild(input);
@@ -219,7 +219,7 @@ const UI = (() => {
           });
         } catch {
           suggestions.innerHTML =
-            '<div class="wp-suggestion wp-suggestion--error">Suche fehlgeschlagen</div>';
+            '<div class="wp-suggestion wp-suggestion--error">Search failed</div>';
         }
       }, 400)
     );
@@ -252,7 +252,7 @@ const UI = (() => {
   function renderSuggestions(container, results, onPick) {
     container.innerHTML = "";
     if (results.length === 0) {
-      container.innerHTML = '<div class="wp-suggestion wp-suggestion--empty">Keine Treffer</div>';
+      container.innerHTML = '<div class="wp-suggestion wp-suggestion--empty">No results</div>';
       return;
     }
     results.forEach((r) => {
@@ -298,7 +298,7 @@ const UI = (() => {
     const profile = CONFIG.PROFILES.find((p) => p.id === selectedProfileId);
     const token = ++calcToken;
 
-    setStatus("loading", "Route wird berechnet …");
+    setStatus("loading", "Calculating route…");
 
     try {
       const result = await Routing.calculateRoute(coords, profile.brouterProfile, true);
@@ -312,7 +312,7 @@ const UI = (() => {
     } catch (err) {
       if (token !== calcToken) return;
       console.error(err);
-      setStatus("error", err.message || "Route konnte nicht berechnet werden.");
+      setStatus("error", err.message || "Could not calculate the route.");
       MapModule.clearRoutes();
       showStats(null);
     }
@@ -373,7 +373,7 @@ const UI = (() => {
     const hasRoute = !!lastResult && WaypointStore.getAll().length >= 2;
     const active = Navigation.isActive();
     dom.startNavBtn.disabled = !hasRoute;
-    dom.startNavBtn.textContent = active ? "⏹ Navigation beenden" : "▶ Route starten";
+    dom.startNavBtn.textContent = active ? "⏹ End navigation" : "▶ Start route";
     dom.startNavBtn.classList.toggle("btn-danger", active);
     if (dom.navigationInfo) {
       dom.navigationInfo.style.display = active ? "" : "none";
@@ -389,21 +389,24 @@ const UI = (() => {
       const distText = state.distanceToManeuver != null ? ` · ${Utils.formatDistance(state.distanceToManeuver)}` : "";
       parts.push(`${state.nextManeuver.text}${distText}`);
     } else {
-      parts.push("Weiter auf der Route");
+      parts.push("Continue on route");
     }
     if (state?.distanceRemaining != null) {
-      parts.push(`noch ${Utils.formatDistance(state.distanceRemaining)}`);
+      parts.push(`remaining ${Utils.formatDistance(state.distanceRemaining)}`);
     }
     if (state?.etaSeconds != null) {
       parts.push(`ETA ${Utils.formatDuration(state.etaSeconds)}`);
     }
-    dom.navigationInfo.innerHTML = `<strong>Live-Navigation</strong><br>${parts.join(" · ")}`;
+    if (state?.speedKmh != null) {
+      parts.push(`${Math.round(state.speedKmh)} km/h`);
+    }
+    dom.navigationInfo.innerHTML = `<strong>Live navigation</strong><br>${parts.join(" · ")}`;
   }
 
   function toggleNavigation() {
     if (Navigation.isActive()) {
       Navigation.stop();
-      toast("Navigation beendet.");
+      toast("Navigation ended.");
       updateNavigationUi();
       return;
     }
@@ -415,7 +418,7 @@ const UI = (() => {
 
     const waypoints = WaypointStore.getAll();
     if (waypoints.length < 2) {
-      toast("Bitte Start und Ziel setzen.");
+      toast("Please set a start and destination.");
       return;
     }
 
@@ -424,10 +427,10 @@ const UI = (() => {
 
     try {
       Navigation.start(activeRoute, waypoints);
-      toast("Live-Navigation gestartet.");
+      toast("Live navigation started.");
       updateNavigationUi();
     } catch (err) {
-      toast(err.message || "Navigation konnte nicht gestartet werden.");
+      toast(err.message || "Navigation could not be started.");
     }
   }
 
@@ -472,7 +475,7 @@ const UI = (() => {
 
   function exportGPX() {
     if (!lastResult) {
-      toast("Bitte zuerst eine Route berechnen.");
+      toast("Please calculate a route first.");
       return;
     }
     const routes = [lastResult.main, ...lastResult.alternatives];
@@ -491,7 +494,7 @@ const UI = (() => {
 
   function useMyLocation() {
     if (!navigator.geolocation) {
-      toast("Standortbestimmung wird von diesem Browser nicht unterstützt.");
+      toast("Location detection is not supported by this browser.");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -500,7 +503,7 @@ const UI = (() => {
         handleMapClick(coords);
         MapModule.flyTo(coords, 15);
       },
-      () => toast("Standort konnte nicht ermittelt werden."),
+      () => toast("Your location could not be determined."),
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
